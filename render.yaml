@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: banco-digital
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SUPABASE_DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
