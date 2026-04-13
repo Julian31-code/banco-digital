@@ -94,3 +94,21 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 - `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
 - `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+- `pnpm run build:vercel` — Builds for Vercel (Build Output API v3): bundles API as serverless function + static frontend
+- `pnpm run build:railway` — Builds for Railway: single-file Express server serving API + static frontend
+- `pnpm run start:railway` — Starts the Railway production server from `dist-railway/server.mjs`
+
+## Deployment
+
+### Vercel
+- Script: `scripts/build-vercel.mjs` → outputs to `.vercel/output/`
+- Frontend as static files, API as serverless function
+- Env vars needed: `SUPABASE_DATABASE_URL`, `SESSION_SECRET`
+
+### Railway
+- Script: `scripts/build-railway.mjs` → outputs to `dist-railway/`
+- Single Express process serves both API (`/api/*`) and static frontend
+- Build command: `pnpm install && pnpm run build:railway`
+- Start command: `pnpm run start:railway`
+- Env vars needed: `SUPABASE_DATABASE_URL`, `SESSION_SECRET`
+- Railway auto-provides `PORT`
