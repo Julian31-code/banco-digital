@@ -1,0 +1,188 @@
+<!-- GAME_NAME: Adivina el Número -->
+<!-- GAME_DESC: Elegí un número del 1 al 10. Si acertás, ganás 8 veces tu apuesta. -->
+<!-- GAME_EMOJI: 🔢 -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adivina el Número</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117; color: #e2e8f0;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    h1 { font-size: 2rem; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
+    .subtitle { color: #64748b; margin-bottom: 24px; font-size: 0.88rem; text-align: center; }
+    .balance-box {
+      background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+      padding: 14px 32px; text-align: center; margin-bottom: 28px;
+    }
+    .balance-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #64748b; margin-bottom: 3px; }
+    .balance-value { font-size: 1.7rem; font-weight: 800; font-family: monospace; }
+    .number-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 10px; margin-bottom: 24px; max-width: 300px; width: 100%;
+    }
+    .num-btn {
+      aspect-ratio: 1; border-radius: 14px; border: 2px solid #334155;
+      background: #1e293b; color: #e2e8f0; font-size: 1.4rem; font-weight: 800;
+      cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+    }
+    .num-btn:hover:not(:disabled) { border-color: #6366f1; background: #2d2b5e; transform: scale(1.05); }
+    .num-btn.selected  { border-color: #6366f1; background: #312e81; box-shadow: 0 0 16px #6366f150; }
+    .num-btn.correct   { border-color: #22c55e; background: #14532d; animation: pop 0.4s ease; }
+    .num-btn.wrong     { border-color: #ef4444; background: #450a0a; }
+    .num-btn.revealed  { border-color: #22c55e; background: #14532d; }
+    @keyframes pop { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+    .num-btn:disabled { cursor: not-allowed; }
+    .bet-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+      background: #1e293b; border-radius: 14px; padding: 12px 16px; width: 100%; max-width: 300px;
+    }
+    .bet-row label { font-size: 0.85rem; color: #64748b; flex: 1; }
+    .bet-input {
+      background: #0f1117; border: 1px solid #334155; border-radius: 8px;
+      padding: 6px 10px; color: #f1f5f9; font-size: 1rem; font-weight: 700;
+      font-family: monospace; width: 100px; text-align: right; outline: none;
+    }
+    .bet-input:focus { border-color: #6366f1; }
+    .result-box { min-height: 52px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+    .result-msg { padding: 10px 20px; border-radius: 12px; font-weight: 700; font-size: 1rem; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+    .win  { background: #14532d; color: #4ade80; border: 1px solid #16a34a; }
+    .lose { background: #450a0a; color: #f87171; border: 1px solid #dc2626; }
+    .info { background: #1e293b; color: #94a3b8; font-size: 0.85rem; }
+    .play-btn {
+      width: 100%; max-width: 300px; padding: 14px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none; border-radius: 14px; color: white; font-size: 1.1rem; font-weight: 800;
+      cursor: pointer; transition: all 0.15s; box-shadow: 0 4px 20px #6366f140;
+    }
+    .play-btn:hover:not(:disabled) { transform: translateY(-2px); }
+    .play-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .odds-note { font-size: 0.78rem; color: #475569; text-align: center; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>🔢 Adivina el Número</h1>
+  <p class="subtitle">Elegí un número del 1 al 10.<br>Si acertás, ganás 8× tu apuesta.</p>
+
+  <div class="balance-box">
+    <div class="balance-label">Tu saldo</div>
+    <div class="balance-value" id="balance">Cargando...</div>
+  </div>
+
+  <div class="number-grid" id="grid"></div>
+
+  <div class="bet-row">
+    <label for="betInput">Apuesta D$</label>
+    <input class="bet-input" id="betInput" type="number" value="1" min="0.00001" step="0.00001" />
+  </div>
+
+  <div class="result-box"><div id="resultMsg"></div></div>
+
+  <button class="play-btn" id="playBtn" onclick="play()">🎯 Apostar</button>
+  <p class="odds-note">Probabilidad: 1 en 10 — Premio: ×8 la apuesta</p>
+
+  <script>
+    // coin — read-only global injected by the bridge, always reflects server balance.
+    // Use GameAPI.bet(amount, won, prize, description) to change it.
+
+    var selected = null;
+    var playing = false;
+
+    function fmt(n) { return 'D$ ' + parseFloat(n).toFixed(5).replace('.', ','); }
+
+    function updateBalanceDisplay() {
+      document.getElementById('balance').textContent = fmt(coin);
+    }
+
+    // Build number grid
+    var grid = document.getElementById('grid');
+    for (var i = 1; i <= 10; i++) {
+      (function(num) {
+        var btn = document.createElement('button');
+        btn.className = 'num-btn';
+        btn.id = 'num-' + num;
+        btn.textContent = num;
+        btn.onclick = function() { selectNum(num); };
+        grid.appendChild(btn);
+      })(i);
+    }
+
+    function selectNum(n) {
+      if (playing) return;
+      document.querySelectorAll('.num-btn').forEach(function(b) { b.classList.remove('selected'); });
+      selected = n;
+      document.getElementById('num-' + n).classList.add('selected');
+    }
+
+    function resetGrid() {
+      document.querySelectorAll('.num-btn').forEach(function(b) {
+        b.className = 'num-btn';
+        b.disabled = false;
+      });
+    }
+
+    function showResult(msg, cls) {
+      var el = document.getElementById('resultMsg');
+      el.className = 'result-msg ' + cls;
+      el.textContent = msg;
+    }
+
+    // Initialize balance display
+    GameAPI.coins.get()
+      .then(function() { updateBalanceDisplay(); })
+      .catch(function() { document.getElementById('balance').textContent = 'Error'; });
+
+    async function play() {
+      if (playing) return;
+      if (!selected) { showResult('Seleccioná un número primero', 'info'); return; }
+
+      var bet = parseFloat(document.getElementById('betInput').value);
+      if (!bet || bet <= 0) { showResult('Ingresá una apuesta válida', 'info'); return; }
+      if (bet > coin) { showResult('Saldo insuficiente', 'info'); return; }
+
+      playing = true;
+      document.getElementById('playBtn').disabled = true;
+      document.querySelectorAll('.num-btn').forEach(function(b) { b.disabled = true; });
+      document.getElementById('resultMsg').textContent = '';
+
+      try {
+        // Short suspense delay (client-side, no server call yet)
+        await new Promise(function(r) { setTimeout(r, 400); });
+
+        var secret = Math.ceil(Math.random() * 10);
+        var won = selected === secret;
+        var prize = won ? bet * 8 : 0;
+
+        // Single atomic server call — server validates balance and updates DB
+        await GameAPI.bet(bet, won, prize, 'Adivina el Número');
+        updateBalanceDisplay();
+
+        if (won) {
+          document.getElementById('num-' + selected).classList.add('correct');
+          showResult('🎉 ¡Era el ' + secret + '! Ganaste ' + fmt(prize), 'win');
+        } else {
+          document.getElementById('num-' + selected).classList.add('wrong');
+          document.getElementById('num-' + secret).classList.add('revealed');
+          showResult('❌ Era el ' + secret + '. Perdiste ' + fmt(bet), 'lose');
+        }
+
+        await new Promise(function(r) { setTimeout(r, 2000); });
+        resetGrid();
+        selected = null;
+      } catch (e) {
+        showResult(e.message || 'Error', 'info');
+      }
+
+      playing = false;
+      document.getElementById('playBtn').disabled = false;
+    }
+  </script>
+</body>
+</html>

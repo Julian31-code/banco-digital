@@ -1,0 +1,225 @@
+<!-- GAME_NAME: Cara o Cruz -->
+<!-- GAME_DESC: Apostá y tirá la moneda. ¡Doble o nada! -->
+<!-- GAME_EMOJI: 🪙 -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cara o Cruz</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      user-select: none;
+    }
+    h1 { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 4px; letter-spacing: -0.5px; }
+    .subtitle { color: #64748b; text-align: center; margin-bottom: 32px; font-size: 0.9rem; }
+    .balance-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 16px 28px;
+      text-align: center;
+      margin-bottom: 28px;
+      min-width: 220px;
+    }
+    .balance-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: #64748b; margin-bottom: 4px; }
+    .balance-value { font-size: 1.8rem; font-weight: 800; font-family: 'Courier New', monospace; color: #f1f5f9; }
+    .coin-container {
+      width: 140px; height: 140px;
+      margin: 0 auto 28px;
+      perspective: 800px;
+    }
+    .coin {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fbbf24, #d97706, #92400e);
+      border: 4px solid #fbbf24;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5rem;
+      box-shadow: 0 0 30px #fbbf2440, inset 0 -6px 12px rgba(0,0,0,0.3);
+      cursor: default;
+    }
+    .coin.spinning { animation: coinFlip 0.8s ease-in-out; }
+    @keyframes coinFlip {
+      0%   { transform: rotateY(0deg)   scaleX(1); }
+      25%  { transform: rotateY(90deg)  scaleX(0.1); }
+      50%  { transform: rotateY(180deg) scaleX(1); }
+      75%  { transform: rotateY(270deg) scaleX(0.1); }
+      100% { transform: rotateY(360deg) scaleX(1); }
+    }
+    .bet-section {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 12px; margin-bottom: 24px;
+    }
+    .bet-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+    .bet-input {
+      background: #1e293b; border: 2px solid #334155; border-radius: 12px;
+      padding: 10px 16px; font-size: 1.3rem; font-weight: 700;
+      color: #f1f5f9; text-align: center; width: 180px;
+      font-family: 'Courier New', monospace; outline: none; transition: border-color 0.2s;
+    }
+    .bet-input:focus { border-color: #fbbf24; }
+    .preset-bets { display: flex; gap: 8px; }
+    .preset-btn {
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      padding: 5px 10px; color: #94a3b8; font-size: 0.8rem;
+      cursor: pointer; transition: all 0.15s; font-weight: 600;
+    }
+    .preset-btn:hover { background: #334155; color: #e2e8f0; }
+    .buttons { display: flex; gap: 14px; margin-bottom: 20px; }
+    .btn {
+      padding: 14px 28px; border-radius: 14px; border: none;
+      font-size: 1.1rem; font-weight: 700; cursor: pointer;
+      transition: all 0.15s; min-width: 130px; letter-spacing: 0.3px;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-cara {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      color: #1c1917; box-shadow: 0 4px 20px #fbbf2440;
+    }
+    .btn-cara:hover:not(:disabled) { box-shadow: 0 6px 28px #fbbf2460; transform: translateY(-1px); }
+    .btn-cruz {
+      background: linear-gradient(135deg, #818cf8, #6366f1);
+      color: white; box-shadow: 0 4px 20px #6366f140;
+    }
+    .btn-cruz:hover:not(:disabled) { box-shadow: 0 6px 28px #6366f160; transform: translateY(-1px); }
+    .result-box { min-height: 60px; display: flex; align-items: center; justify-content: center; }
+    .result-msg {
+      padding: 12px 24px; border-radius: 14px;
+      font-size: 1.1rem; font-weight: 700; animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .result-win  { background: #14532d; color: #4ade80; border: 1px solid #16a34a; }
+    .result-lose { background: #450a0a; color: #f87171; border: 1px solid #dc2626; }
+    .result-info { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+    .error-msg   { color: #f87171; font-size: 0.85rem; margin-top: 8px; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>🪙 Cara o Cruz</h1>
+  <p class="subtitle">Apostá y duplicá tus D$. ¡50/50!</p>
+
+  <div class="balance-box">
+    <div class="balance-label">Tu saldo</div>
+    <div class="balance-value" id="balance">Cargando...</div>
+  </div>
+
+  <div class="coin-container">
+    <div class="coin" id="coinEl">🪙</div>
+  </div>
+
+  <div class="bet-section">
+    <div class="bet-label">Apuesta</div>
+    <input class="bet-input" id="betInput" type="number" placeholder="0.00000" min="0.00001" step="0.00001" />
+    <div class="preset-bets">
+      <button class="preset-btn" onclick="setBet(1)">D$ 1</button>
+      <button class="preset-btn" onclick="setBet(5)">D$ 5</button>
+      <button class="preset-btn" onclick="setBet(10)">D$ 10</button>
+      <button class="preset-btn" onclick="setBet(50)">D$ 50</button>
+    </div>
+    <div class="error-msg" id="errMsg"></div>
+  </div>
+
+  <div class="buttons">
+    <button class="btn btn-cara" id="caraBtn" onclick="play('cara')">☀️ Cara</button>
+    <button class="btn btn-cruz" id="cruzBtn" onclick="play('cruz')">🌙 Cruz</button>
+  </div>
+
+  <div class="result-box">
+    <div id="resultMsg"></div>
+  </div>
+
+  <script>
+    // coin — read-only global injected by the bridge, always reflects server balance.
+    // Use GameAPI.bet(amount, won, prize, description) to change it.
+
+    var playing = false;
+
+    function fmt(n) {
+      return 'D$ ' + parseFloat(n).toFixed(5).replace('.', ',');
+    }
+
+    function setBet(amount) {
+      document.getElementById('betInput').value = amount;
+    }
+
+    function setButtons(disabled) {
+      document.getElementById('caraBtn').disabled = disabled;
+      document.getElementById('cruzBtn').disabled = disabled;
+    }
+
+    function showResult(msg, type) {
+      var el = document.getElementById('resultMsg');
+      el.className = 'result-msg result-' + type;
+      el.textContent = msg;
+    }
+
+    function updateBalanceDisplay() {
+      document.getElementById('balance').textContent = fmt(coin);
+    }
+
+    // Initialize balance display — coins.get() fetches from server and updates coin.
+    GameAPI.coins.get()
+      .then(function() { updateBalanceDisplay(); })
+      .catch(function() { document.getElementById('balance').textContent = 'Error'; });
+
+    async function play(choice) {
+      if (playing) return;
+
+      var err = document.getElementById('errMsg');
+      err.textContent = '';
+      var bet = parseFloat(document.getElementById('betInput').value);
+      if (!bet || bet <= 0) { err.textContent = 'Ingresá un monto válido'; return; }
+      if (bet > coin) { err.textContent = 'Saldo insuficiente'; return; }
+
+      playing = true;
+      setButtons(true);
+      document.getElementById('resultMsg').textContent = '';
+
+      try {
+        // Animation first, then server call
+        var coinEl = document.getElementById('coinEl');
+        coinEl.classList.add('spinning');
+        await new Promise(function(r) { setTimeout(r, 900); });
+        coinEl.classList.remove('spinning');
+
+        var result = Math.random() < 0.5 ? 'cara' : 'cruz';
+        coinEl.textContent = result === 'cara' ? '☀️' : '🌙';
+
+        var won = result === choice;
+        var prize = won ? bet * 2 : 0;
+
+        // Single atomic server call — server validates balance, updates DB
+        await GameAPI.bet(bet, won, prize, 'Cara o Cruz');
+        updateBalanceDisplay();
+
+        if (won) {
+          showResult('¡Ganaste! Salió ' + result + '. +' + fmt(bet) + ' de ganancia 🎉', 'win');
+        } else {
+          showResult('Perdiste. Salió ' + result + '. -' + fmt(bet) + ' 💸', 'lose');
+        }
+
+        setTimeout(function() { coinEl.textContent = '🪙'; }, 2500);
+      } catch (e) {
+        showResult(e.message || 'Error al procesar', 'info');
+      }
+
+      playing = false;
+      setButtons(false);
+    }
+  </script>
+</body>
+</html>

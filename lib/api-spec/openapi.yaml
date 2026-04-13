@@ -1,0 +1,933 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Banco D$ API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User operations
+  - name: transfers
+    description: Transfer operations
+  - name: reserves
+    description: Reserve operations
+  - name: shared-reserves
+    description: Shared reserve operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Username already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{username}:
+    get:
+      operationId: getUserByUsername
+      tags: [users]
+      summary: Get user by username
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicUser"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/profile:
+    patch:
+      operationId: updateProfile
+      tags: [users]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/password:
+    patch:
+      operationId: changePassword
+      tags: [users]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/account:
+    delete:
+      operationId: deleteAccount
+      tags: [users]
+      summary: Delete account (requires zero balance in all reserves and main balance)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteAccountRequest"
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Non-zero balance or wrong password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /transactions:
+    get:
+      operationId: getTransactions
+      tags: [transfers]
+      summary: Get transaction history for current user (last 100)
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /transfers:
+    post:
+      operationId: createTransfer
+      tags: [transfers]
+      summary: Transfer money to another user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequest"
+      responses:
+        "200":
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferResponse"
+        "400":
+          description: Insufficient balance or invalid amount
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Recipient not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reserves:
+    get:
+      operationId: getReserves
+      tags: [reserves]
+      summary: Get all personal reserves for current user
+      responses:
+        "200":
+          description: List of reserves
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reserve"
+    post:
+      operationId: createReserve
+      tags: [reserves]
+      summary: Create a personal reserve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReserveRequest"
+      responses:
+        "201":
+          description: Reserve created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reserve"
+
+  /reserves/{reserveId}:
+    patch:
+      operationId: updateReserve
+      tags: [reserves]
+      summary: Update reserve (rename)
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReserveRequest"
+      responses:
+        "200":
+          description: Reserve updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reserve"
+        "404":
+          description: Reserve not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteReserve
+      tags: [reserves]
+      summary: Delete a personal reserve (only if balance is zero)
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reserve deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Reserve has non-zero balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reserves/{reserveId}/deposit:
+    post:
+      operationId: depositToReserve
+      tags: [reserves]
+      summary: Deposit money into a personal reserve
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveTransactionRequest"
+      responses:
+        "200":
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reserve"
+        "400":
+          description: Insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reserves/{reserveId}/withdraw:
+    post:
+      operationId: withdrawFromReserve
+      tags: [reserves]
+      summary: Withdraw money from a personal reserve
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveTransactionRequest"
+      responses:
+        "200":
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reserve"
+        "400":
+          description: Insufficient reserve balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /shared-reserves:
+    get:
+      operationId: getSharedReserves
+      tags: [shared-reserves]
+      summary: Get all shared reserves for current user
+      responses:
+        "200":
+          description: List of shared reserves
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SharedReserve"
+    post:
+      operationId: createSharedReserve
+      tags: [shared-reserves]
+      summary: Create a shared reserve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSharedReserveRequest"
+      responses:
+        "201":
+          description: Shared reserve created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedReserve"
+
+  /shared-reserves/{reserveId}:
+    patch:
+      operationId: updateSharedReserve
+      tags: [shared-reserves]
+      summary: Update shared reserve (rename)
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReserveRequest"
+      responses:
+        "200":
+          description: Shared reserve updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedReserve"
+    delete:
+      operationId: deleteSharedReserve
+      tags: [shared-reserves]
+      summary: Delete shared reserve (only if balance is zero, all members agree)
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Non-zero balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /shared-reserves/{reserveId}/deposit:
+    post:
+      operationId: depositToSharedReserve
+      tags: [shared-reserves]
+      summary: Deposit to shared reserve
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveTransactionRequest"
+      responses:
+        "200":
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedReserve"
+
+  /shared-reserves/{reserveId}/withdraw:
+    post:
+      operationId: withdrawFromSharedReserve
+      tags: [shared-reserves]
+      summary: Withdraw from shared reserve
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveTransactionRequest"
+      responses:
+        "200":
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedReserve"
+
+  /shared-reserves/{reserveId}/members:
+    post:
+      operationId: addSharedReserveMember
+      tags: [shared-reserves]
+      summary: Add a member to a shared reserve
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddMemberRequest"
+      responses:
+        "200":
+          description: Member added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedReserve"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /shared-reserves/{reserveId}/members/{userId}:
+    delete:
+      operationId: removeSharedReserveMember
+      tags: [shared-reserves]
+      summary: Vote to remove a member (requires all other members to agree)
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vote registered or member removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoveMemberResponse"
+
+  /shared-reserves/{reserveId}/leave:
+    post:
+      operationId: leaveSharedReserve
+      tags: [shared-reserves]
+      summary: Leave a shared reserve
+      parameters:
+        - name: reserveId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Left the reserve
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+        password:
+          type: string
+          minLength: 6
+        confirmPassword:
+          type: string
+      required:
+        - username
+        - password
+        - confirmPassword
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        message:
+          type: string
+      required:
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        balance:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - username
+        - balance
+        - createdAt
+
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+      required:
+        - id
+        - username
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        avatarUrl:
+          type: string
+          nullable: true
+
+    ChangePasswordRequest:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+        confirmNewPassword:
+          type: string
+      required:
+        - currentPassword
+        - newPassword
+        - confirmNewPassword
+
+    DeleteAccountRequest:
+      type: object
+      properties:
+        password:
+          type: string
+      required:
+        - password
+
+    TransferRequest:
+      type: object
+      properties:
+        toUsername:
+          type: string
+        amount:
+          type: string
+      required:
+        - toUsername
+        - amount
+
+    TransferResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        newBalance:
+          type: string
+      required:
+        - message
+        - newBalance
+
+    Reserve:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        balance:
+          type: string
+        userId:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - balance
+        - userId
+        - createdAt
+
+    CreateReserveRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+      required:
+        - name
+
+    UpdateReserveRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+      required:
+        - name
+
+    ReserveTransactionRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+      required:
+        - amount
+
+    SharedReserve:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        balance:
+          type: string
+        createdByUserId:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/SharedReserveMember"
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - balance
+        - createdByUserId
+        - members
+        - createdAt
+
+    SharedReserveMember:
+      type: object
+      properties:
+        userId:
+          type: integer
+        username:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        joinedAt:
+          type: string
+      required:
+        - userId
+        - username
+        - joinedAt
+
+    CreateSharedReserveRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        memberUsernames:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - memberUsernames
+
+    AddMemberRequest:
+      type: object
+      properties:
+        username:
+          type: string
+      required:
+        - username
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+          enum: [ingreso, egreso]
+        amount:
+          type: string
+        counterpartUsername:
+          type: string
+          nullable: true
+        description:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - type
+        - amount
+        - description
+        - createdAt
+
+    RemoveMemberResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        votesNeeded:
+          type: integer
+          nullable: true
+        votesRegistered:
+          type: integer
+          nullable: true
+        removed:
+          type: boolean
+      required:
+        - message
+        - removed

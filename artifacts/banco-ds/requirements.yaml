@@ -1,0 +1,16 @@
+packages:
+  "framer-motion": "For page transitions, smooth enter animations, and modal interactions"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility function to efficiently merge Tailwind CSS classes"
+
+images:
+  - path: "artifacts/banco-ds/public/images/hero-bg.png"
+    description: "Abstract modern gradient mesh in deep navy blue and bright teal, sleek and trustworthy fintech banking background, soft geometric lighting"
+    aspect_ratio: "16:9"
+  - path: "artifacts/banco-ds/public/images/logo.png"
+    description: "Minimalist modern geometric letter D intertwined with a dollar sign, solid deep blue color, flat design, transparent background"
+    aspect_ratio: "1:1"
+
+notes:
+  - "Orval hooks from @workspace/api-client-react are generated and used for data fetching"
+  - "Shadcn toast hook relies on existing src/hooks/use-toast.ts"

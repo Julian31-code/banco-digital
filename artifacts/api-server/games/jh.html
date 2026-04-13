@@ -1,0 +1,108 @@
+<!-- GAME_NAME: Sorteo de Números -->
+<!-- GAME_DESC: Compra tu número y espera al sorteo en 1 hora -->
+<!-- GAME_EMOJI: 🎟️ -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sorteo de Números</title>
+<style>
+  body { margin:0; font-family:Arial,sans-serif; background:#0f1117; color:#f0f0f0; display:flex; flex-direction:column; min-height:100vh; padding:10px; }
+  #balance { text-align:center; font-size:1.2em; margin-bottom:10px; }
+  #numbers { display:grid; grid-template-columns:repeat(10,1fr); gap:5px; margin-bottom:10px; }
+  .number-btn { padding:10px; background:#2e2f42; border:none; border-radius:5px; color:#f0f0f0; cursor:pointer; transition:background 0.2s; }
+  .number-btn:hover { background:#44455c; }
+  .number-btn.taken { background:#555; cursor:not-allowed; }
+  #status { text-align:center; margin-top:10px; }
+</style>
+</head>
+<body>
+  <div id="balance">Saldo: 0.00000</div>
+  <div id="numbers"></div>
+  <div id="status">Cargando...</div>
+
+<script>
+(async () => {
+  const price = 10;
+  const totalNumbers = 100;
+  const sessionName = 'sorteo100';
+  const balanceEl = document.getElementById('balance');
+  const numbersEl = document.getElementById('numbers');
+  const statusEl = document.getElementById('status');
+
+  // Actualizar saldo inicial
+  await GameAPI.coins.get();
+  balanceEl.textContent = 'Saldo: ' + coin.toFixed(5);
+
+  async function loadTickets() {
+    const tickets = await GameAPI.data.get(sessionName); // todos los tickets
+    const myTickets = await GameAPI.data.getMine(sessionName); // mis tickets
+    return { tickets, myTickets };
+  }
+
+  async function renderNumbers() {
+    const { tickets } = await loadTickets();
+    numbersEl.innerHTML = '';
+    for (let i = 1; i <= totalNumbers; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = i;
+      btn.className = 'number-btn';
+      if (tickets.some(t => t.key === 'ticket' && parseInt(t.value) === i)) {
+        btn.classList.add('taken');
+      } else {
+        btn.addEventListener('click', async () => {
+          if (coin < price) { alert('No tienes suficiente saldo'); return; }
+          // Descontar saldo
+          await GameAPI.bet(price, true, 0, 'Sorteo de Números');
+          // Guardar el ticket
+          await GameAPI.data.set('ticket', i.toString(), sessionName);
+          // Actualizar saldo
+          await GameAPI.coins.get();
+          balanceEl.textContent = 'Saldo: ' + coin.toFixed(5);
+          renderNumbers();
+        });
+      }
+      numbersEl.appendChild(btn);
+    }
+  }
+
+  await renderNumbers();
+
+  // Calcular tiempo para sorteo
+  let allTickets = await GameAPI.data.get(sessionName);
+  let firstTicketTime = allTickets[0]?.createdAt ? new Date(allTickets[0].createdAt).getTime() : Date.now();
+  const drawTime = firstTicketTime + 60*60*1000;
+
+  function updateCountdown() {
+    const now = Date.now();
+    let diff = drawTime - now;
+    if (diff <= 0) {
+      clearInterval(timer);
+      playDraw();
+    } else {
+      let minutes = Math.floor(diff/60000);
+      let seconds = Math.floor((diff%60000)/1000);
+      statusEl.textContent = `Sorteo en: ${minutes}m ${seconds}s`;
+    }
+  }
+
+  const timer = setInterval(updateCountdown,1000);
+  updateCountdown();
+
+  async function playDraw() {
+    const tickets = await GameAPI.data.get(sessionName);
+    if (tickets.length === 0) {
+      statusEl.textContent = 'No hubo participantes 😢';
+      return;
+    }
+    const winner = tickets[Math.floor(Math.random() * tickets.length)];
+    statusEl.textContent = `🎉 Ganador: número ${winner.value} (${winner.username}) 🎉`;
+    const totalPot = tickets.length * price;
+    await GameAPI.bet(0, true, totalPot, 'Sorteo de Números');
+  }
+
+})();
+</script>
+</body>
+</html>
