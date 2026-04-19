@@ -38,10 +38,13 @@ export default function MiningPage() {
   const [autoMining, setAutoMining] = useState(false);
   const [holdMining, setHoldMining] = useState(false);
   const [winFlash, setWinFlash] = useState(0);
+  const [rate, setRate] = useState(2);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlightRef = useRef(false);
   const stopRef = useRef(false);
+  const rateRef = useRef(rate);
+  rateRef.current = rate;
 
   useEffect(() => {
     if (user) {
@@ -83,8 +86,19 @@ export default function MiningPage() {
     intervalRef.current = setInterval(() => {
       if (stopRef.current) return;
       mine();
-    }, 500);
+    }, Math.round(1000 / rateRef.current));
   };
+
+  const restartMining = () => {
+    if (!intervalRef.current) return;
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+    startMining();
+  };
+
+  useEffect(() => {
+    if (intervalRef.current) restartMining();
+  }, [rate]);
 
   const stopMining = () => {
     if (intervalRef.current) {
@@ -176,6 +190,30 @@ export default function MiningPage() {
                 : "Minado automático activado. Tocá de nuevo para parar."
               : "Tocá para minar automáticamente, o mantené presionado."}
           </p>
+        </div>
+
+        <div className="bg-muted/40 rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              Velocidad
+            </label>
+            <span className="font-mono font-bold text-foreground text-sm">
+              {rate} {rate === 1 ? "vez/seg" : "veces/seg"}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={10}
+            step={1}
+            value={rate}
+            onChange={(e) => setRate(Number(e.target.value))}
+            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1 px-0.5">
+            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+            <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+          </div>
         </div>
 
         <div className="flex items-center justify-between rounded-2xl px-4 py-4 bg-yellow-400/10 border-2 border-yellow-400/30">
