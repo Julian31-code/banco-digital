@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-railway
+.vercel
+.cache
+.local
+.git
+*.tsbuildinfo

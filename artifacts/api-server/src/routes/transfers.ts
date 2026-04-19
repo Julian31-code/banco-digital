@@ -7,12 +7,27 @@ import { lockUsers, AppError, handleError } from "../lib/locks.js";
 
 const router: IRouter = Router();
 
+const CURRENCY_FIELDS = {
+  DS: { col: "balance", label: "D$" },
+  diamond: { col: "diamond", label: "Diamante" },
+  ruby: { col: "ruby", label: "Rubí" },
+  emerald: { col: "emerald", label: "Esmeralda" },
+  legendaryJewel: { col: "legendaryJewel", label: "Joya Legendaria" },
+} as const;
+
+type CurrencyKey = keyof typeof CURRENCY_FIELDS;
+
 router.post("/", async (req, res) => {
   try {
     const session = req.session as any;
     if (!session?.userId) return res.status(401).json({ error: "No autenticado" });
 
-    const { toUsername, amount } = req.body;
+    const { toUsername, amount, currency: rawCurrency } = req.body;
+    const currency = (rawCurrency || "DS") as CurrencyKey;
+
+    if (!CURRENCY_FIELDS[currency]) {
+      return res.status(400).json({ error: "Moneda inválida" });
+    }
     if (!toUsername || !amount) {
       return res.status(400).json({ error: "Todos los campos son obligatorios" });
     }
@@ -24,7 +39,6 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Monto demasiado grande" });
     }
 
-    // Pre-flight: resolve IDs before the transaction (read-only, safe)
     const [sender] = await db
       .select({ id: usersTable.id, username: usersTable.username })
       .from(usersTable)
@@ -43,44 +57,43 @@ router.post("/", async (req, res) => {
     if (!recipient) return res.status(404).json({ error: "Usuario destinatario no encontrado" });
 
     const amountStr = amountNum.toFixed(5);
+    const { col, label } = CURRENCY_FIELDS[currency];
     let newSenderBalance = "";
 
     await db.transaction(async (tx) => {
-      // Lock both rows atomically (ascending ID order prevents deadlocks)
       await lockUsers(tx, sender.id, recipient.id);
 
-      // Re-read fresh balances while we hold the locks
-      const [s] = await tx.select({ balance: usersTable.balance }).from(usersTable).where(eq(usersTable.id, sender.id)).limit(1);
-      const [r] = await tx.select({ balance: usersTable.balance }).from(usersTable).where(eq(usersTable.id, recipient.id)).limit(1);
+      const [s] = await tx.select().from(usersTable).where(eq(usersTable.id, sender.id)).limit(1);
+      const [r] = await tx.select().from(usersTable).where(eq(usersTable.id, recipient.id)).limit(1);
 
-      const senderBal = parseFloat(s!.balance || "0");
-      if (senderBal < amountNum) throw new AppError("Saldo insuficiente");
+      const senderBal = parseFloat((s as any)![col] || "0");
+      if (senderBal < amountNum) throw new AppError(`Saldo de ${label} insuficiente`);
 
       newSenderBalance = (senderBal - amountNum).toFixed(5);
-      const newRecipientBalance = (parseFloat(r!.balance || "0") + amountNum).toFixed(5);
+      const newRecipientBalance = (parseFloat((r as any)![col] || "0") + amountNum).toFixed(5);
 
-      await tx.update(usersTable).set({ balance: newSenderBalance }).where(eq(usersTable.id, sender.id));
-      await tx.update(usersTable).set({ balance: newRecipientBalance }).where(eq(usersTable.id, recipient.id));
+      await tx.update(usersTable).set({ [col]: newSenderBalance } as any).where(eq(usersTable.id, sender.id));
+      await tx.update(usersTable).set({ [col]: newRecipientBalance } as any).where(eq(usersTable.id, recipient.id));
       await tx.insert(transactionsTable).values([
         {
           userId: sender.id,
           type: "egreso",
           amount: amountStr,
           counterpartUsername: recipient.username,
-          description: `Transferencia a @${recipient.username}`,
+          description: `Transferencia de ${label} a @${recipient.username}`,
         },
         {
           userId: recipient.id,
           type: "ingreso",
           amount: amountStr,
           counterpartUsername: sender.username,
-          description: `Transferencia de @${sender.username}`,
+          description: `Transferencia de ${label} de @${sender.username}`,
         },
       ]);
     });
 
     return res.json({
-      message: `Transferencia de D$ ${amountStr} a @${toUsername} realizada exitosamente`,
+      message: `Transferencia de ${label} ${amountStr} a @${toUsername} realizada exitosamente`,
       newBalance: formatBalance(newSenderBalance),
     });
   } catch (err: any) {

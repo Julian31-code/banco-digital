@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ArrowRightLeft, PiggyBank, User, LogOut, LayoutDashboard, History, Building2, MapPin } from "lucide-react";
+import { Menu, X, ArrowRightLeft, PiggyBank, User, LogOut, LayoutDashboard, History, Building2, MapPin, Pickaxe } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Modal } from "../ui/Modal";
@@ -31,6 +31,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { name: "Movimientos", path: "/movimientos", icon: <History className="w-5 h-5" /> },
     { name: "Propiedades", path: "/propiedades", icon: <Building2 className="w-5 h-5" /> },
     { name: "Mis Propiedades", path: "/mis-propiedades", icon: <MapPin className="w-5 h-5" /> },
+    { name: "Minar", path: "/minar", icon: <Pickaxe className="w-5 h-5" /> },
     { name: "Perfil", path: "/perfil", icon: <User className="w-5 h-5" /> },
   ];
 

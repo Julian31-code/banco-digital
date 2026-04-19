@@ -18,6 +18,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import TransactionsPage from "@/pages/TransactionsPage";
 import PropiedadesPage from "@/pages/PropiedadesPage";
 import MisPropiedadesPage from "@/pages/MisPropiedadesPage";
+import MiningPage from "@/pages/MiningPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,7 @@ function MainApp() {
           <Route path="/movimientos" component={TransactionsPage} />
           <Route path="/propiedades" component={PropiedadesPage} />
           <Route path="/mis-propiedades" component={MisPropiedadesPage} />
+          <Route path="/minar" component={MiningPage} />
           <Route path="/perfil" component={ProfilePage} />
           <Route>
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">

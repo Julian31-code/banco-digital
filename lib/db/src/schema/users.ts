@@ -8,6 +8,10 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   balance: numeric("balance", { precision: 20, scale: 5 }).notNull().default("0.00000"),
   avatarUrl: text("avatar_url"),
+  diamond: numeric("diamond", { precision: 20, scale: 5 }).notNull().default("0.00000"),
+  ruby: numeric("ruby", { precision: 20, scale: 5 }).notNull().default("0.00000"),
+  emerald: numeric("emerald", { precision: 20, scale: 5 }).notNull().default("0.00000"),
+  legendaryJewel: numeric("legendary_jewel", { precision: 20, scale: 5 }).notNull().default("0.00000"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
