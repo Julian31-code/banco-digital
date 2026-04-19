@@ -1,7 +1,9 @@
-import { useGetTransactions } from "@workspace/api-client-react";
+import { useState } from "react";
+import { useGetTransactions, useGetMe } from "@workspace/api-client-react";
 import { formatDolar } from "@/lib/utils";
-import { ArrowDownLeft, ArrowUpRight, Clock, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Clock, Calendar, User, Hash, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -15,8 +17,33 @@ function formatDate(iso: string) {
   });
 }
 
+function formatFullDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }) + " · " + d.toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+type Tx = {
+  id: number;
+  type: string;
+  amount: string;
+  description?: string | null;
+  counterpartUsername?: string | null;
+  createdAt: string;
+};
+
 export default function TransactionsPage() {
   const { data: txs, isLoading } = useGetTransactions();
+  const { data: me } = useGetMe();
+  const [selected, setSelected] = useState<Tx | null>(null);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-12">
@@ -50,12 +77,13 @@ export default function TransactionsPage() {
           {txs.map((tx, i) => {
             const isIngreso = tx.type === "ingreso";
             return (
-              <motion.div
+              <motion.button
                 key={tx.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.025 }}
-                className="bg-card rounded-2xl p-4 border border-border/60 flex items-center gap-4"
+                onClick={() => setSelected(tx as Tx)}
+                className="w-full text-left bg-card rounded-2xl p-4 border border-border/60 flex items-center gap-4 hover:border-primary/50 hover:shadow-md transition-all active:scale-[0.99]"
               >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
                   isIngreso
@@ -97,11 +125,96 @@ export default function TransactionsPage() {
                     {isIngreso ? "Ingreso" : "Egreso"}
                   </p>
                 </div>
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>
       )}
+
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-md">
+          {selected && (() => {
+            const isIngreso = selected.type === "ingreso";
+            const myUsername = (me as any)?.username;
+            const fromUser = isIngreso ? (selected.counterpartUsername || "—") : (myUsername || "Vos");
+            const toUser = isIngreso ? (myUsername || "Vos") : (selected.counterpartUsername || "—");
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isIngreso ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-destructive/10 text-destructive"
+                    }`}>
+                      {isIngreso ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                    </div>
+                    <span>Detalle del movimiento</span>
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4 mt-2">
+                  <div className="text-center py-4 bg-muted/30 rounded-2xl">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                      {isIngreso ? "Ingreso" : "Egreso"}
+                    </p>
+                    <p className={`font-mono text-3xl font-black ${
+                      isIngreso ? "text-green-600 dark:text-green-400" : "text-destructive"
+                    }`}>
+                      {isIngreso ? "+" : "-"}{formatDolar(selected.amount)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 px-1">
+                    {selected.counterpartUsername && (
+                      <>
+                        <div className="flex items-start gap-3">
+                          <User className="w-4 h-4 mt-1 text-muted-foreground shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">De</p>
+                            <p className="font-semibold text-foreground">@{fromUser}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <User className="w-4 h-4 mt-1 text-muted-foreground shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">Para</p>
+                            <p className="font-semibold text-foreground">@{toUser}</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="flex items-start gap-3">
+                      <Calendar className="w-4 h-4 mt-1 text-muted-foreground shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Fecha y hora</p>
+                        <p className="font-semibold text-foreground capitalize">{formatFullDate(selected.createdAt)}</p>
+                      </div>
+                    </div>
+
+                    {selected.description && (
+                      <div className="flex items-start gap-3">
+                        <FileText className="w-4 h-4 mt-1 text-muted-foreground shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs text-muted-foreground">Descripción</p>
+                          <p className="font-medium text-foreground">{selected.description}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-3">
+                      <Hash className="w-4 h-4 mt-1 text-muted-foreground shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">N° de movimiento</p>
+                        <p className="font-mono font-semibold text-foreground">#{selected.id}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
