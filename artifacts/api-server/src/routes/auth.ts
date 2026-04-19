@@ -39,6 +39,10 @@ router.post("/register", async (req, res) => {
         username: user.username,
         balance: formatBalance(user.balance),
         avatarUrl: user.avatarUrl,
+        diamond: user.diamond,
+        ruby: user.ruby,
+        emerald: user.emerald,
+        legendaryJewel: user.legendaryJewel,
         createdAt: user.createdAt.toISOString(),
       },
       message: "Cuenta creada exitosamente",
@@ -71,6 +75,10 @@ router.post("/login", async (req, res) => {
         username: user.username,
         balance: formatBalance(user.balance),
         avatarUrl: user.avatarUrl,
+        diamond: user.diamond,
+        ruby: user.ruby,
+        emerald: user.emerald,
+        legendaryJewel: user.legendaryJewel,
         createdAt: user.createdAt.toISOString(),
       },
     });
@@ -101,6 +109,10 @@ router.get("/me", async (req, res) => {
       username: user.username,
       balance: formatBalance(user.balance),
       avatarUrl: user.avatarUrl,
+      diamond: user.diamond,
+      ruby: user.ruby,
+      emerald: user.emerald,
+      legendaryJewel: user.legendaryJewel,
       createdAt: user.createdAt.toISOString(),
     });
   } catch (err) {

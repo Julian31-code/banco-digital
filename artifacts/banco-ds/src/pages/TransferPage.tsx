@@ -7,14 +7,11 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { NumericKeyboard } from "@/components/ui/NumericKeyboard";
 import { extractError, parseAmount } from "@/lib/utils";
-import { Send, ArrowRightLeft, ChevronDown } from "lucide-react";
+import { Send, ArrowRightLeft } from "lucide-react";
 import { useLocation } from "wouter";
 
 const CURRENCIES = [
   { key: "DS", label: "D$", short: "D$" },
-  { key: "diamond", label: "Diamante", short: "💎" },
-  { key: "ruby", label: "Rubí", short: "🔴" },
-  { key: "emerald", label: "Esmeralda", short: "🟢" },
   { key: "legendaryJewel", label: "Joya Legendaria", short: "👑" },
 ] as const;
 
@@ -24,7 +21,6 @@ export default function TransferPage() {
   const [username, setUsername] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<CurrencyKey>("DS");
-  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();

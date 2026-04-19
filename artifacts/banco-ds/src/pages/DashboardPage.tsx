@@ -2,7 +2,7 @@ import { useGetMe } from "@workspace/api-client-react";
 import { formatDolar } from "@/lib/utils";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowRightLeft, PiggyBank, Users, ShieldCheck } from "lucide-react";
+import { ArrowRightLeft, PiggyBank, Users, ShieldCheck, Crown } from "lucide-react";
 
 export default function DashboardPage() {
   const { data: user } = useGetMe();
@@ -25,6 +25,13 @@ export default function DashboardPage() {
         </div>
         
         <div className="relative z-10 flex flex-col justify-center min-h-[160px]">
+          <div className="flex items-center gap-1.5 mb-1 text-yellow-300/90">
+            <Crown className="w-3 h-3" />
+            <span className="text-[11px] font-mono font-semibold tracking-tight">
+              {parseFloat((user as any)?.legendaryJewel ?? "0").toFixed(5).replace(".", ",")}
+            </span>
+            <span className="text-[10px] text-yellow-200/60 uppercase tracking-wider">Joya Leg.</span>
+          </div>
           <h2 className="text-white/70 font-medium tracking-widest uppercase text-sm mb-2">Saldo Disponible</h2>
           <div className="flex items-baseline gap-2">
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-display font-extrabold tracking-tight">
