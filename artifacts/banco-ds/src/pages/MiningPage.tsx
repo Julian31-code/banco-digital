@@ -39,13 +39,13 @@ export default function MiningPage() {
   const [autoMining, setAutoMining] = useState(false);
   const [holdMining, setHoldMining] = useState(false);
   const [winFlash, setWinFlash] = useState(0);
-  const [rate, setRate] = useState(2);
+  const [betAmount, setBetAmount] = useState(0.00001);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlightRef = useRef(false);
   const stopRef = useRef(false);
-  const rateRef = useRef(rate);
-  rateRef.current = rate;
+  const betRef = useRef(betAmount);
+  betRef.current = betAmount;
 
   useEffect(() => {
     if (user) {
@@ -54,7 +54,7 @@ export default function MiningPage() {
     }
   }, [user]);
 
-  const mine = async (count: number) => {
+  const mine = async (amount: number) => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
@@ -62,7 +62,7 @@ export default function MiningPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count }),
+        body: JSON.stringify({ amount }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -73,9 +73,7 @@ export default function MiningPage() {
       const data: MineResponse = await r.json();
       setBalance(data.balance);
       setLegendaryJewel(data.legendaryJewel);
-      const minedCount = data.minedCount ?? count;
-      // Vibrate proportional to mined count, capped
-      vibrate(Math.min(200, 30 + minedCount * 8));
+      vibrate(Math.min(200, 30 + (data.minedCount ?? 1)));
       if (data.jewelsFound > 0) {
         setWinFlash((x) => x + 1);
       }
@@ -90,11 +88,11 @@ export default function MiningPage() {
   const startMining = () => {
     if (intervalRef.current) return;
     stopRef.current = false;
-    mine(rateRef.current);
+    mine(betRef.current);
     intervalRef.current = setInterval(() => {
       if (stopRef.current) return;
-      mine(rateRef.current);
-    }, 1000);
+      mine(betRef.current);
+    }, 500);
   };
 
   const stopMining = () => {
@@ -189,28 +187,42 @@ export default function MiningPage() {
           </p>
         </div>
 
-        <div className="bg-muted/40 rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
+        <div className="bg-muted/40 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
             <label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-              Velocidad
+              Apuesta por tirada
             </label>
             <span className="font-mono font-bold text-foreground text-sm">
-              {rate} {rate === 1 ? "vez/seg" : "veces/seg"}
+              D$ {betAmount.toFixed(5).replace(".", ",")}
             </span>
           </div>
           <input
             type="range"
             min={1}
-            max={10}
+            max={100000}
             step={1}
-            value={rate}
-            onChange={(e) => setRate(Number(e.target.value))}
+            value={Math.round(betAmount * 100000)}
+            onChange={(e) => setBetAmount(Number(e.target.value) / 100000)}
             className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
           />
-          <div className="flex justify-between text-[10px] text-muted-foreground mt-1 px-0.5">
-            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-            <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+          <div className="flex flex-wrap gap-1.5">
+            {[0.00001, 0.0001, 0.001, 0.01, 0.1, 1].map((v) => (
+              <button
+                key={v}
+                onClick={() => setBetAmount(v)}
+                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors ${
+                  Math.abs(betAmount - v) < 1e-9
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border hover:border-primary/50"
+                }`}
+              >
+                D${v.toFixed(5).replace(".", ",")}
+              </button>
+            ))}
           </div>
+          <p className="text-[11px] text-muted-foreground text-center">
+            Cada medio segundo: {Math.round(betAmount * 100000).toLocaleString("es-AR")} intentos · –D${betAmount.toFixed(5).replace(".", ",")}
+          </p>
         </div>
 
         <div className="flex items-center justify-between rounded-2xl px-4 py-4 bg-yellow-400/10 border-2 border-yellow-400/30">

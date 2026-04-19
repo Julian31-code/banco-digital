@@ -22,7 +22,13 @@ router.post("/mine", async (req, res) => {
     if (!session?.userId) return res.status(401).json({ error: "No autenticado" });
 
     const userId = session.userId as number;
-    const requestedCount = Math.max(1, Math.min(20, Number(req.body?.count) || 1));
+    const MAX_BET = 1.0;
+    const rawAmount = Number(req.body?.amount);
+    if (!Number.isFinite(rawAmount) || rawAmount < COST) {
+      throw new AppError(`Monto mínimo D$${COST.toFixed(5)}`);
+    }
+    const betAmount = Math.min(MAX_BET, rawAmount);
+    const requestedCount = Math.round(betAmount / COST);
 
     let result: {
       balance: string;
@@ -78,8 +84,8 @@ router.post("/mine", async (req, res) => {
         type: "egreso",
         amount: totalCost,
         description: jewelsFound > 0
-          ? `Minería x${affordable}: encontraste ${(REWARD * jewelsFound).toFixed(5)} Joya Legendaria`
-          : `Minería x${affordable}: sin recompensa`,
+          ? `Minería D$${totalCost} (${affordable} intentos): +${(REWARD * jewelsFound).toFixed(5)} Joya Legendaria`
+          : `Minería D$${totalCost} (${affordable} intentos): sin recompensa`,
       });
 
       result = {
