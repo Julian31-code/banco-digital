@@ -22,7 +22,7 @@ router.post("/mine", async (req, res) => {
     if (!session?.userId) return res.status(401).json({ error: "No autenticado" });
 
     const userId = session.userId as number;
-    const mineral = rollMineral();
+    const requestedCount = Math.max(1, Math.min(20, Number(req.body?.count) || 1));
 
     let result: {
       balance: string;
@@ -30,7 +30,8 @@ router.post("/mine", async (req, res) => {
       ruby: string;
       emerald: string;
       legendaryJewel: string;
-      mineral: Mineral;
+      minedCount: number;
+      jewelsFound: number;
     } | null = null;
 
     await db.transaction(async (tx) => {
@@ -49,41 +50,46 @@ router.post("/mine", async (req, res) => {
         .limit(1);
       if (!u) throw new AppError("Usuario no encontrado", 404);
 
-      const balance = parseFloat(u.balance || "0");
-      if (balance < COST) throw new AppError("Saldo insuficiente para minar");
+      let balance = parseFloat(u.balance || "0");
+      let jewel = parseFloat(u.legendaryJewel || "0");
 
-      const newBalance = (balance - COST).toFixed(5);
+      const affordable = Math.min(requestedCount, Math.floor(balance / COST));
+      if (affordable < 1) throw new AppError("Saldo insuficiente para minar");
 
-      const updateData: any = { balance: newBalance };
-      const newValues = {
-        diamond: u.diamond,
-        ruby: u.ruby,
-        emerald: u.emerald,
-        legendaryJewel: u.legendaryJewel,
-      };
-
-      if (mineral) {
-        const cur = parseFloat((u as any)[mineral] || "0");
-        const next = (cur + REWARD).toFixed(5);
-        updateData[mineral] = next;
-        (newValues as any)[mineral] = next;
+      let jewelsFound = 0;
+      for (let i = 0; i < affordable; i++) {
+        balance -= COST;
+        if (rollMineral() === "legendaryJewel") {
+          jewel += REWARD;
+          jewelsFound++;
+        }
       }
 
-      await tx.update(usersTable).set(updateData).where(eq(usersTable.id, userId));
+      const newBalance = balance.toFixed(5);
+      const newJewel = jewel.toFixed(5);
 
+      await tx.update(usersTable)
+        .set({ balance: newBalance, legendaryJewel: newJewel })
+        .where(eq(usersTable.id, userId));
+
+      const totalCost = (COST * affordable).toFixed(5);
       await tx.insert(transactionsTable).values({
         userId,
         type: "egreso",
-        amount: COST.toFixed(5),
-        description: mineral
-          ? `Minería: encontraste ${REWARD.toFixed(5)} de ${mineralLabel(mineral)}`
-          : "Minería: sin recompensa",
+        amount: totalCost,
+        description: jewelsFound > 0
+          ? `Minería x${affordable}: encontraste ${(REWARD * jewelsFound).toFixed(5)} Joya Legendaria`
+          : `Minería x${affordable}: sin recompensa`,
       });
 
       result = {
         balance: newBalance,
-        ...newValues,
-        mineral,
+        diamond: u.diamond,
+        ruby: u.ruby,
+        emerald: u.emerald,
+        legendaryJewel: newJewel,
+        minedCount: affordable,
+        jewelsFound,
       };
     });
 
@@ -92,14 +98,5 @@ router.post("/mine", async (req, res) => {
     handleError(err, res, "Mining error");
   }
 });
-
-function mineralLabel(m: Exclude<Mineral, null>): string {
-  return {
-    ruby: "Rubí",
-    emerald: "Esmeralda",
-    diamond: "Diamante",
-    legendaryJewel: "Joya Legendaria",
-  }[m];
-}
 
 export default router;

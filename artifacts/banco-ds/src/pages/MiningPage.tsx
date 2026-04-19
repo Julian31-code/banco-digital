@@ -13,7 +13,8 @@ interface MineResponse {
   ruby: string;
   emerald: string;
   legendaryJewel: string;
-  mineral: Mineral;
+  minedCount: number;
+  jewelsFound: number;
 }
 
 function fmt(v: string | undefined): string {
@@ -53,11 +54,16 @@ export default function MiningPage() {
     }
   }, [user]);
 
-  const mine = async () => {
+  const mine = async (count: number) => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
-      const r = await fetch("/api/mining/mine", { method: "POST", credentials: "include" });
+      const r = await fetch("/api/mining/mine", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count }),
+      });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         stopAll();
@@ -67,8 +73,10 @@ export default function MiningPage() {
       const data: MineResponse = await r.json();
       setBalance(data.balance);
       setLegendaryJewel(data.legendaryJewel);
-      vibrate(40);
-      if (data.mineral) {
+      const minedCount = data.minedCount ?? count;
+      // Vibrate proportional to mined count, capped
+      vibrate(Math.min(200, 30 + minedCount * 8));
+      if (data.jewelsFound > 0) {
         setWinFlash((x) => x + 1);
       }
     } catch (e) {
@@ -82,23 +90,12 @@ export default function MiningPage() {
   const startMining = () => {
     if (intervalRef.current) return;
     stopRef.current = false;
-    mine();
+    mine(rateRef.current);
     intervalRef.current = setInterval(() => {
       if (stopRef.current) return;
-      mine();
-    }, Math.round(1000 / rateRef.current));
+      mine(rateRef.current);
+    }, 1000);
   };
-
-  const restartMining = () => {
-    if (!intervalRef.current) return;
-    clearInterval(intervalRef.current);
-    intervalRef.current = null;
-    startMining();
-  };
-
-  useEffect(() => {
-    if (intervalRef.current) restartMining();
-  }, [rate]);
 
   const stopMining = () => {
     if (intervalRef.current) {
