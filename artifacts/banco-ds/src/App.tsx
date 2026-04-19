@@ -16,8 +16,6 @@ import PersonalReservePage from "@/pages/PersonalReservePage";
 import SharedReservePage from "@/pages/SharedReservePage";
 import ProfilePage from "@/pages/ProfilePage";
 import TransactionsPage from "@/pages/TransactionsPage";
-import PropiedadesPage from "@/pages/PropiedadesPage";
-import MisPropiedadesPage from "@/pages/MisPropiedadesPage";
 import MiningPage from "@/pages/MiningPage";
 
 const queryClient = new QueryClient({
@@ -40,8 +38,6 @@ function MainApp() {
           <Route path="/reservas/personal/:id" component={PersonalReservePage} />
           <Route path="/reservas/compartida/:id" component={SharedReservePage} />
           <Route path="/movimientos" component={TransactionsPage} />
-          <Route path="/propiedades" component={PropiedadesPage} />
-          <Route path="/mis-propiedades" component={MisPropiedadesPage} />
           <Route path="/minar" component={MiningPage} />
           <Route path="/perfil" component={ProfilePage} />
           <Route>

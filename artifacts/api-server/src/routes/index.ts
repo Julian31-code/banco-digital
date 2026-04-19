@@ -6,7 +6,6 @@ import transfersRouter from "./transfers";
 import reservesRouter from "./reserves";
 import sharedReservesRouter from "./shared-reserves";
 import transactionsRouter from "./transactions";
-import propertiesRouter from "./properties";
 import miningRouter from "./mining";
 
 const router: IRouter = Router();
@@ -18,7 +17,6 @@ router.use("/transfers", transfersRouter);
 router.use("/reserves", reservesRouter);
 router.use("/shared-reserves", sharedReservesRouter);
 router.use("/transactions", transactionsRouter);
-router.use("/properties", propertiesRouter);
 router.use("/mining", miningRouter);
 
 export default router;
