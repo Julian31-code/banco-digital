@@ -78,16 +78,6 @@ router.post("/mine", async (req, res) => {
         .set({ balance: newBalance, legendaryJewel: newJewel })
         .where(eq(usersTable.id, userId));
 
-      const totalCost = (COST * affordable).toFixed(5);
-      await tx.insert(transactionsTable).values({
-        userId,
-        type: "egreso",
-        amount: totalCost,
-        description: jewelsFound > 0
-          ? `Minería D$${totalCost} (${affordable} intentos): +${(REWARD * jewelsFound).toFixed(5)} Joya Legendaria`
-          : `Minería D$${totalCost} (${affordable} intentos): sin recompensa`,
-      });
-
       result = {
         balance: newBalance,
         diamond: u.diamond,
